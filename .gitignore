@@ -1,0 +1,15 @@
+# PlatformIO build output / downloaded packages
+.pio/
+
+# VS Code: keep shared recommendations, drop machine-generated files
+.vscode/*
+!.vscode/extensions.json
+.vscode/.browse.c_cpp.db*
+.vscode/c_cpp_properties.json
+.vscode/launch.json
+.vscode/ipch/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
