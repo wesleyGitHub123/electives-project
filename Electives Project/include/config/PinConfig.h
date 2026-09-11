@@ -35,8 +35,15 @@ struct MoistureSensorPinConfig {
   // 4 perimeter points + 1 central probe, in sensor-index order.
   // TBD: confirm physical placement <-> array index mapping, and whether
   // these are direct ADC pins or go through an analog mux.
+  //
+  // Index 0: the one physical bench unit currently wired (AOUT -> GPIO6).
+  // Bench-characterized (bench/moisture_bench_adc.cpp, docs/BENCH_VALIDATION.md):
+  // dry-air avg raw ADC ~2648, water-immersion avg raw ADC ~707 (12-bit).
+  // Assigned to index 0 only because it's the first slot -- this does NOT
+  // imply it is physically the central probe or perimeter point 1; that
+  // mapping is still undecided.
   int adcPins[kMoistureSensorCount] = {
-      kUnassignedPin, kUnassignedPin, kUnassignedPin,
+      6, kUnassignedPin, kUnassignedPin,
       kUnassignedPin, kUnassignedPin,
   };
 };

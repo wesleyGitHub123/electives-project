@@ -4,10 +4,15 @@
 
 namespace paddy {
 
-// TODO(hardware): implement real ADC acquisition once sensor pin mapping,
-// ADC channel assignment, and the moisture calibration curve are finalized
-// (see include/config/PinConfig.h and docs/ARCHITECTURE.md). Deliberately a
-// stub for now -- do not guess pins or a calibration formula.
+// Real per-channel ADC acquisition for the wired moisture sensing points.
+// Unassigned channels (kUnassignedPin) report valid=false rather than
+// faulting; readings are deliberately raw 12-bit ADC counts -- calibration
+// is NOT applied yet. MoistureCalibrationConfig stays at
+// kUnassignedCalibrationValue sentinels on purpose: the bench dry/wet
+// endpoints are a soil-sensor reference frame, not yet validated against
+// real paddy grain (docs/BENCH_VALIDATION.md) -- scaling now would present
+// a number that looks like a calibrated moisture percentage before that
+// validation exists.
 //
 // Swappability note: any future concrete moisture-sensor implementation
 // (different capacitive model, muxed inputs, etc.) plugs in by writing a
@@ -24,7 +29,7 @@ class Esp32MoistureSensorArray : public IMoistureSensorArray {
 
  private:
   MoistureSensorPinConfig pins_;
-  // Held for the future driver body; unused while this stays a stub.
+  // Held for the future calibration step (deferred -- see class comment).
   MoistureCalibrationConfig calibration_;
 };
 
