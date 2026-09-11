@@ -85,6 +85,20 @@ void Oled128x64Display::renderTwoLines(const char* line1, const char* line2) {
   u8g2_.sendBuffer();
 }
 
+// Compact 3-line layout for showResult(): u8g2_font_7x13_tr is 13px tall,
+// so baselines at y=16/34/52 fit three lines within the 64px panel with
+// margin. ~7px advance per char keeps the widest line ("Res: StoreSafely",
+// 17 chars ~ 119px) inside the 128px width.
+void Oled128x64Display::renderThreeLines(const char* line1, const char* line2,
+                                         const char* line3) {
+  u8g2_.clearBuffer();
+  u8g2_.setFont(u8g2_font_7x13_tr);
+  u8g2_.drawStr(0, 16, line1);
+  u8g2_.drawStr(0, 34, line2);
+  u8g2_.drawStr(0, 52, line3);
+  u8g2_.sendBuffer();
+}
+
 void Oled128x64Display::showState(SystemState state) {
   // Idle is the only state reachable while the start switch is off, so the
   // hint line doubles as a visual sanity check of the session gate.
@@ -95,19 +109,36 @@ void Oled128x64Display::showState(SystemState state) {
 
 void Oled128x64Display::showResult(BatchStatus status,
                                    const BatchFeatures& features) {
-  // Temperature is the sanity-check surface for this bring-up session;
-  // moisture/variability rendering is deliberately deferred (stub sensors
-  // would just render noise).
+  // "Res:" not "Result:": at the compact font (~7px/char) the full word
+  // would clip the 128px panel width ("Result: StoreSafely" = 20 chars).
+  char resultLine[24];
+  snprintf(resultLine, sizeof(resultLine), "Res: %s", statusName(status));
+
+  // Independent temperature flag on purpose, NOT features.valid -- that
+  // gate also requires moisture (and, with 1/5 channels wired, whole-batch
+  // valid can be false while temperature is fine). Same overloaded-flag
+  // bug class fixed in WifiUiDisplay; both adapters stay honest the same
+  // way.
   char tempLine[24];
-  if (features.valid) {
+  if (features.temperatureValid) {
     snprintf(tempLine, sizeof(tempLine), "Temp: %.1f C",
              static_cast<double>(features.temperatureCelsius));
   } else {
     snprintf(tempLine, sizeof(tempLine), "Temp: --");
   }
-  char resultLine[24];
-  snprintf(resultLine, sizeof(resultLine), "Result: %s", statusName(status));
-  renderTwoLines(resultLine, tempLine);
+
+  // Raw/unitless, gated on the moisture-specific independent flag --
+  // mirrors WifiUiDisplay::handleRoot() exactly. Never scaled to 0-100%
+  // (see Esp32MoistureSensorArray::readAll()).
+  char moistLine[24];
+  if (features.moistureValid) {
+    snprintf(moistLine, sizeof(moistLine), "Moist: %.1f",
+             static_cast<double>(features.meanMoisture));
+  } else {
+    snprintf(moistLine, sizeof(moistLine), "Moist: --");
+  }
+
+  renderThreeLines(resultLine, tempLine, moistLine);
 }
 
 void Oled128x64Display::showFault(const char* message) {

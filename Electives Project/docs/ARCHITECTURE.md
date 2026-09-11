@@ -218,21 +218,26 @@ scope below still applies.
 - **Pins: GPIO8=SDA, GPIO9=SCL** (ESP32-S3 Arduino-core default Wire pins,
   free, non-strapping). **Power: 3V3 + GND.** I2C pull-ups are required —
   the FEIYANG module includes them on-board.
-- **Driver chip: both SH1106 and SSD1306 were tried — neither rendered**
-  (consistent with the parking rationale above). The .cpp currently
-  instantiates SSD1306 (`U8G2_SSD1306_128X64_NONAME_F_HW_I2C`); when
-  re-testing with a replacement module, swap that single constructor line
-  for `U8G2_SH1106_128X64_NONAME_F_HW_I2C` — one line, nothing else
-  changes.
+- **Driver chip: SH1106 — now confirmed** by the replacement 1.3" module's
+  listing (a real datasheet fact, no longer a guess). Against the original,
+  abandoned module both SH1106 and SSD1306 were tried — neither rendered —
+  but that failure is believed to be hardware/connectivity (see parking
+  rationale above), not a chip mismatch. The .cpp constructor has already
+  been updated to `U8G2_SH1106_128X64_NONAME_F_HW_I2C` ahead of physical
+  re-testing — the chip is a known fact now, nothing else about it needs
+  to wait for wiring.
 - **Address: 0x3C configured, not trusted.** `begin()` scans the whole bus
   and logs every device it finds (`[paddy][oled] found device at 0x..`);
   if the real address differs, update `DisplayPinConfig::i2cAddress`.
 - `begin()` is lenient: a missing/miswired OLED does not Fault the system —
   it just stays blank (Serial remains the feedback channel).
-- **Content is deliberately minimal (bring-up scope):** state name + switch
-  hint (`showState`), result status + temperature (`showResult`), fault
-  message. No moisture/variability UI yet — stub sensors would only render
-  noise. Expand `showResult` once real moisture data exists.
+- **Content (bring-up scope, now at parity with the WiFi page):** state
+  name + switch hint (`showState`, 2-line large font), fault message, and
+  `showResult` now renders **result + temperature + moisture mean** on a
+  compact 3-line font. Moisture is raw/unitless, gated on the independent
+  `moistureValid` flag (never the whole-batch `valid` gate) — same
+  convention as the WiFi page. Per-point moisture still isn't renderable:
+  no interface carries per-point data to the display layer yet.
 
 ### Start slide switch (implemented)
 
