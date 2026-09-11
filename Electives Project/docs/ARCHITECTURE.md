@@ -42,7 +42,9 @@ instantiated. Pending a replacement module.
   line, `IDisplay` does not change, nothing else moves.
 - Continue the remaining stub adapters: real moisture-sensor driver, relay,
   status LEDs, real classifier (see "What is intentionally not
-  implemented").
+  implemented"). Sensor selection is pre-wiring R&D: characterize any
+  candidate analog moisture sensor on the bench first — see
+  [docs/BENCH_VALIDATION.md](BENCH_VALIDATION.md).
 
 ## Layering and the dependency-inversion rule
 
