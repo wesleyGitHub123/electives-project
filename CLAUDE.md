@@ -17,11 +17,10 @@ running fully offline, reports the result on a user-facing status surface,
 and — if needed — drives a relay-controlled heater/blower until a safe
 condition is reached.
 
-This is a git repository (Conventional Commits history). **The project is
-currently paused** — see "Project status: paused" at the top of
+This is a git repository (Conventional Commits history). See "## Status"
+near the top of
 [Electives Project/docs/ARCHITECTURE.md](Electives%20Project/docs/ARCHITECTURE.md)
-for what works, what is parked (the 1.3" OLED), and the concrete next step
-when resuming.
+for what's currently working and the next step.
 
 ## Architecture
 
@@ -39,12 +38,12 @@ All pin mapping, timing, and threshold constants live in
 
 This is currently a **scaffold**, not a finished product: most HAL
 adapter bodies are still `TODO(hardware)` stubs (exceptions: `ArduinoClock`,
-`Ds18b20TemperatureSensor`, `GpioStartTrigger`, `WifiUiDisplay`;
-`Oled128x64Display` is a real driver too but is **parked** — flaky
-physical I2C, kept and still compiling but not instantiated; `WifiUiDisplay`
-is the active status surface), most
-pins in `PinConfig.h` are still unassigned placeholders (exceptions: OLED
-I2C GPIO8/9 @ 0x3C, start-switch GPIO5), the classifier
+`Ds18b20TemperatureSensor`, `GpioStartTrigger`, `Oled128x64Display` — the
+active display — and `Esp32MoistureSensorArray`, real for one of five
+channels only; `WifiUiDisplay` is also real, kept as a fallback display
+but not currently instantiated), most pins in `PinConfig.h` are still
+unassigned placeholders (exceptions: OLED I2C GPIO8/9 @ 0x3C, start-switch
+GPIO5, DS18B20 GPIO4, moisture channel 0 GPIO6), the classifier
 (`NotImplementedClassifier`) always returns `Unknown` rather than faking a
 prediction, and there is no production drying algorithm yet. See
 "What is intentionally not implemented" in ARCHITECTURE.md for the full
