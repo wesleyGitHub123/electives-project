@@ -38,6 +38,7 @@ BatchFeatures FeatureExtractor::extract(const BatchSample& sample) {
   // Only zeroed when temperature itself has no valid reading.
   features.temperatureCelsius =
       (tempValidCount > 0) ? (tempSum / static_cast<float>(tempValidCount)) : 0.0f;
+  features.temperatureValid = (tempValidCount > 0);
 
   // Conservative validity rule: every temperature probe must report a valid
   // reading for the features to be trusted. With a single probe this is

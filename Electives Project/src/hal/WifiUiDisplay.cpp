@@ -75,7 +75,10 @@ void WifiUiDisplay::showState(SystemState state) {
 void WifiUiDisplay::showResult(BatchStatus status,
                                const BatchFeatures& features) {
   lastStatus_ = status;
-  lastTemperatureValid_ = features.valid;
+  // Independent of features.valid on purpose -- that flag also requires
+  // moisture to be valid (currently always false, stub sensors), which
+  // would hide a perfectly good temperature reading. See BatchFeatures.
+  lastTemperatureValid_ = features.temperatureValid;
   lastTemperatureC_ = features.temperatureCelsius;
 }
 

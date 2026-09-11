@@ -26,6 +26,7 @@ void test_extract_returns_invalid_when_no_valid_moisture_readings() {
   // invalid (moisture-only reason) -- lets real sensor wiring be
   // sanity-checked over Serial/UI while moisture sensors are still stubs.
   TEST_ASSERT_EQUAL_FLOAT(25.0f, features.temperatureCelsius);
+  TEST_ASSERT_TRUE(features.temperatureValid);
 }
 
 void test_extract_computes_mean_of_valid_readings_only() {
@@ -42,6 +43,7 @@ void test_extract_computes_mean_of_valid_readings_only() {
   TEST_ASSERT_TRUE(features.valid);
   TEST_ASSERT_EQUAL_FLOAT(25.0f, features.meanMoisture); // (10+20+30+40)/4
   TEST_ASSERT_EQUAL_FLOAT(28.0f, features.temperatureCelsius);
+  TEST_ASSERT_TRUE(features.temperatureValid);
 }
 
 void test_extract_computes_zero_variability_for_uniform_readings() {
@@ -64,6 +66,7 @@ void test_extract_invalid_when_temperature_missing() {
   TEST_ASSERT_FALSE(features.valid);
   // No valid temperature reading at all -- nothing to surface.
   TEST_ASSERT_EQUAL_FLOAT(0.0f, features.temperatureCelsius);
+  TEST_ASSERT_FALSE(features.temperatureValid);
 }
 
 int main(int argc, char** argv) {

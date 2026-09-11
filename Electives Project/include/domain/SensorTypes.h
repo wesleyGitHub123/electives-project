@@ -40,6 +40,11 @@ struct BatchFeatures {
   float meanMoisture = 0.0f;
   float moistureVariability = 0.0f; // "how unevenly dried" the batch is
   float temperatureCelsius = 0.0f;
+  // Independent of `valid` below -- true whenever temperatureCelsius itself
+  // reflects a real reading, regardless of moisture sensor state. Lets
+  // consumers (Serial trace, WiFi UI) display temperature on its own merits
+  // instead of hiding it behind the whole-batch gate.
+  bool temperatureValid = false;
   bool valid = false; // false if the input sample had insufficient valid data
 };
 
