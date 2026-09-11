@@ -40,7 +40,8 @@ PinConfig pinConfig{};
 NetworkConfig networkConfig{};
 
 ArduinoClock clock;
-Esp32MoistureSensorArray moistureSensors(pinConfig.moisture);
+Esp32MoistureSensorArray moistureSensors(pinConfig.moisture,
+                                         pinConfig.moistureCalibration);
 Ds18b20TemperatureSensor temperatureSensor(pinConfig.temperature);
 WifiUiDisplay display(networkConfig);
 GpioStartTrigger startTrigger(pinConfig.startTrigger);

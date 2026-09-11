@@ -12,6 +12,25 @@ namespace paddy {
 
 constexpr int kUnassignedPin = -1; // sentinel meaning "not wired yet"
 
+// Sentinel meaning "not calibrated yet" -- same convention as
+// kUnassignedPin, for calibration numbers instead of pins. Do not invent
+// real values here: they come only from a bench characterization of the
+// chosen sensor, per docs/BENCH_VALIDATION.md.
+constexpr int kUnassignedCalibrationValue = -1;
+
+struct MoistureCalibrationConfig {
+  // Raw ADC endpoints for mapping analogRead() counts onto a normalized
+  // moisture scale. TBD until a specific candidate sensor is chosen,
+  // purchased, and bench-calibrated -- see docs/BENCH_VALIDATION.md. Do
+  // not invent numbers here.
+  int rawDryValue = kUnassignedCalibrationValue; // ADC count, open air / fully dry
+  int rawWetValue = kUnassignedCalibrationValue; // ADC count, fully immersed in water
+  // TBD: soil-moisture capacitive sensors are calibrated for soil, not
+  // loose grain -- whether grain-specific reference points are needed in
+  // addition to these two endpoints is an open question. See
+  // docs/BENCH_VALIDATION.md "grain vs soil" caveat.
+};
+
 struct MoistureSensorPinConfig {
   // 4 perimeter points + 1 central probe, in sensor-index order.
   // TBD: confirm physical placement <-> array index mapping, and whether
@@ -65,6 +84,11 @@ struct DryingActuatorPinConfig {
 
 struct PinConfig {
   MoistureSensorPinConfig moisture;
+  // One shared calibration struct for all 5 points (not per-channel):
+  // simplest starting point. docs/BENCH_VALIDATION.md's multi-unit variance
+  // check is exactly the data that would justify upgrading to a
+  // per-channel array later, if units turn out to vary enough to matter.
+  MoistureCalibrationConfig moistureCalibration;
   TemperatureSensorPinConfig temperature;
   DisplayPinConfig display;
   StatusIndicatorPinConfig statusIndicator;
