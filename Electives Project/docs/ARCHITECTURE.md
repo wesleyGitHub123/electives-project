@@ -12,6 +12,38 @@ dependency-inverted skeleton with the real state machine and pure logic in
 place, but no sensor drivers, no trained classifier, and no drying
 algorithm yet. See "What is intentionally not implemented" below.
 
+## Project status: paused
+
+Work is checkpointed and paused here (2026-09-11). Resume context:
+
+**Working:**
+- Native unit tests: `pio test -e native` — 13 passing (feature extractor +
+  batch controller, incl. switch gating and per-cycle display servicing).
+- ESP32-S3 firmware build (`pio run -e esp32-s3-devkitc-1`).
+- DS18B20 temperature driver; slide-switch session trigger (GPIO5,
+  active-low, sampled in `Idle` only).
+- WiFi status UI (see "WiFi status UI" under Wiring notes) — the
+  go-forward visual sanity-check surface.
+
+**Parked — 1.3" 128x64 I2C OLED.** A hardware/connectivity issue is
+strongly indicated, not a driver/software bug: the I2C link works (0x3C
+ACKs, `u8g2.begin()` succeeds) yet nothing ever renders, and
+`endTransmission()` was observed flip-flopping between 0 (ACK) and 2 (NACK)
+across resets on the same wiring, across multiple boards. Power integrity
+and bus-level electrical issues were not conclusively ruled out, but the
+module itself is now the prime suspect. The driver
+(`Oled128x64Display`) is **kept and still compiles** — it is simply not
+instantiated. Pending a replacement module.
+
+**Next step when resuming** (pick one):
+- Re-test the OLED with new hardware: swap
+  `WifiUiDisplay display(networkConfig);` back for
+  `Oled128x64Display display(pinConfig.display);` in `main.cpp` — one
+  line, `IDisplay` does not change, nothing else moves.
+- Continue the remaining stub adapters: real moisture-sensor driver, relay,
+  status LEDs, real classifier (see "What is intentionally not
+  implemented").
+
 ## Layering and the dependency-inversion rule
 
 ```
@@ -27,8 +59,8 @@ core/FeatureExtractor   interfaces/I*.h  (IMoistureSensorArray, ITemperatureSens
                                    ^
                                    |
                           hal/*  (Esp32MoistureSensorArray, Ds18b20TemperatureSensor,
-                                   Ssd1306StatusDisplay, GpioStatusIndicator,
-                                   RelayDryingActuator, ArduinoClock)
+                                   Oled128x64Display [parked], WifiUiDisplay,
+                                   RelayDryingActuator, ArduinoClock, GpioStartTrigger)
                                    |
                                    v
                           Arduino/ESP32 APIs (analogRead, GPIO, I2C, millis, ...)
@@ -45,8 +77,10 @@ core/FeatureExtractor   interfaces/I*.h  (IMoistureSensorArray, ITemperatureSens
   tests exercise directly.
 - `include/hal/` + `src/hal/` — concrete adapters implementing the
   interfaces using Arduino/ESP32 APIs. This is the *only* place allowed to
-  touch hardware. `Ds18b20TemperatureSensor` is a real driver; the rest are
-  still stubs (see below).
+  touch hardware. `Ds18b20TemperatureSensor`, `GpioStartTrigger`, and
+  `WifiUiDisplay` are real drivers; `Oled128x64Display` is a real driver
+  but **parked** (flaky physical I2C — kept, still compiling, currently
+  not instantiated); the rest are still stubs (see below).
 - `include/config/` — the single visible place for hardware pin mapping
   (`PinConfig.h`), timing tunables (`SystemConfig.h`), and future
   classification thresholds (`ThresholdConfig.h`). No magic numbers
@@ -104,15 +138,20 @@ testable with `test/mocks/MockClock.h`.
 Per project scope, this scaffold stops short of a finished product:
 
 - **Hardware pin mapping** (`include/config/PinConfig.h`): all pin/I2C
-  addresses are still the sentinel `kUnassignedPin`/`0x00` **except**
-  `TemperatureSensorPinConfig::oneWirePin = 4` (DS18B20), which is real —
-  see "Wiring notes" below for why GPIO4 and what's required.
-- **HAL adapter bodies** (`src/hal/*.cpp`): every method beyond
-  `ArduinoClock` (wraps `millis()`) and `Ds18b20TemperatureSensor` (real
-  OneWire/DallasTemperature driver) is a `TODO(hardware)` stub returning
-  safe placeholder values (`valid = false`, no-op renders, etc.). They
-  compile and run safely on real hardware but do not yet read/drive
-  anything.
+  addresses are still the sentinel `kUnassignedPin`/`0x00` **except** three
+  real mappings — `TemperatureSensorPinConfig::oneWirePin = 4` (DS18B20),
+  `DisplayPinConfig` (OLED on I2C GPIO8=SDA / GPIO9=SCL @ 0x3C), and
+  `StartTriggerPinConfig::switchPin = 5` (slide switch) — see "Wiring
+  notes" below.
+- **HAL adapter bodies** (`src/hal/*.cpp`): every adapter beyond
+  `ArduinoClock` (wraps `millis()`), `Ds18b20TemperatureSensor` (real
+  OneWire/DallasTemperature driver), `WifiUiDisplay` (real WiFi AP +
+  HTTP status page), and `GpioStartTrigger` (real GPIO level read) is a
+  `TODO(hardware)` stub returning safe placeholder values
+  (`valid = false`, no-op renders, etc.). `Oled128x64Display` is also a
+  real driver but **parked** (flaky physical I2C — see "Project status:
+  paused"). The stubs compile and run safely on real hardware but do not
+  yet read/drive anything.
 - **Classifier** (`include/core/NotImplementedClassifier.h`): always
   returns `BatchStatus::Unknown`. Deliberately not a fake Random Forest —
   it never pretends to have a real prediction, so `BatchController` can
@@ -156,15 +195,111 @@ Debug builds print the live `BatchFeatures` (including `temperatureC=`)
 over Serial on every `ReportingResult`/`DryingComplete` — see `main.cpp` —
 so real sensor values can be sanity-checked without extra tooling.
 
+### 1.3" 128x64 I2C OLED (implemented, parked)
+
+Driver: `include/hal/Oled128x64Display.h` / `src/hal/Oled128x64Display.cpp`,
+using `olikraus/U8g2@^2.36.18` (pinned in `platformio.ini`).
+
+**Parked (2026-09-11): this module never rendered anything.** Evidence from
+an extensive bring-up session (I2C scans, SH1106/SSD1306 driver swaps, an
+isolated raw-U8g2 diagnostic sketch, multiple boards): the I2C link works
+(0x3C ACKs, `u8g2.begin()` succeeds) but nothing renders, and
+`endTransmission()` was observed flip-flopping between 0 (ACK) and 2 (NACK)
+across resets on the same wiring — a hardware/connectivity issue is
+strongly indicated (power integrity and bus-level electrical issues not
+fully ruled out), not a driver/software bug. The driver is kept in the
+tree and still compiles (the esp32 env has no `build_src_filter`, so it
+builds even though `main.cpp` no longer instantiates it — deliberate, so
+parked code cannot bit-rot). Resume with a replacement module; the content
+scope below still applies.
+
+- **Pins: GPIO8=SDA, GPIO9=SCL** (ESP32-S3 Arduino-core default Wire pins,
+  free, non-strapping). **Power: 3V3 + GND.** I2C pull-ups are required —
+  the FEIYANG module includes them on-board.
+- **Driver chip: both SH1106 and SSD1306 were tried — neither rendered**
+  (consistent with the parking rationale above). The .cpp currently
+  instantiates SSD1306 (`U8G2_SSD1306_128X64_NONAME_F_HW_I2C`); when
+  re-testing with a replacement module, swap that single constructor line
+  for `U8G2_SH1106_128X64_NONAME_F_HW_I2C` — one line, nothing else
+  changes.
+- **Address: 0x3C configured, not trusted.** `begin()` scans the whole bus
+  and logs every device it finds (`[paddy][oled] found device at 0x..`);
+  if the real address differs, update `DisplayPinConfig::i2cAddress`.
+- `begin()` is lenient: a missing/miswired OLED does not Fault the system —
+  it just stays blank (Serial remains the feedback channel).
+- **Content is deliberately minimal (bring-up scope):** state name + switch
+  hint (`showState`), result status + temperature (`showResult`), fault
+  message. No moisture/variability UI yet — stub sensors would only render
+  noise. Expand `showResult` once real moisture data exists.
+
+### Start slide switch (implemented)
+
+Driver: `include/hal/GpioStartTrigger.h` / `src/hal/GpioStartTrigger.cpp`.
+
+- **Pin: GPIO5** — free, not a strapping/USB/flash pin. **Wiring: one side
+  of the slide switch to GPIO5, the other to GND** — `INPUT_PULLUP` makes
+  an external resistor unnecessary.
+- **Polarity: `activeLow = true`** (pin LOW = session requested). Confirm
+  which physical position is "on" via the Serial `startSwitch=` trace; if
+  reversed, flip the one bool in `PinConfig.h`.
+- **Gating semantics (deliberate):** the switch is sampled only in `Idle`
+  (`BatchController::handleIdle`). A session in progress always runs to
+  completion even if the switch flips off mid-cycle — it only prevents the
+  *next* session. An abort/e-stop behavior would need its own safety
+  design; not guessed here.
+
+### WiFi status UI (implemented, replaces the parked OLED for now)
+
+Driver: `include/hal/WifiUiDisplay.h` / `src/hal/WifiUiDisplay.cpp`, using
+the `WiFi.h` / `WebServer.h` headers shipped with the `espressif32`
+platform (no new `lib_deps`). Config:
+`include/config/NetworkConfig.h`.
+
+- **The device hosts its own access point** (`WiFi.softAP`): SSID
+  `PaddyMonitor`, WPA2 password `paddy1234` — development-only defaults
+  for a local AP the device itself creates, not real-world secrets and not
+  a security model. Join the AP from a phone/laptop and browse to
+  **http://192.168.4.1**. Switching to station mode (join an existing
+  network) is a small change in `WifiUiDisplay::begin()` if ever wanted.
+- **Page content (same minimal bring-up scope the parked OLED had):**
+  state, last result, temperature (`--` until real data), start-switch
+  hint (`waiting` while `Idle`, `ON` otherwise — same heuristic the OLED
+  used), and the fault message if any. Plain server-side HTML, auto-refresh
+  via `<meta http-equiv="refresh" content="2">` — no JavaScript, no client
+  build step.
+- **Observational only:** the request handler renders cached read-only
+  snapshots fed by `showState`/`showResult`/`showFault` on transitions; it
+  never reaches back into `BatchController` or any live internals. The
+  slide switch remains the sole session-start control path.
+- **Servicing:** `server_.handleClient()` runs on every `update()` call via
+  the `IDisplay::poll()` hook — the first line of
+  `BatchController::update()`, so it runs even in `Fault`. `main.cpp`
+  never touches the adapter directly.
+- **Lenient like every other display adapter:** a WiFi/AP failure does not
+  Fault the system; Serial remains the feedback channel.
+- **Serial lines to expect** (the proof-of-life, verifiable without ever
+  joining the AP): on boot —
+  `[paddy][wifi-ui] softAP("PaddyMonitor") = started`,
+  `[paddy][wifi-ui] browse to http://192.168.4.1`,
+  `[paddy][wifi-ui] HTTP server started` — then
+  `[paddy][wifi-ui] served request #N` per page load.
+
 ## Current on-device behavior
 
-With all adapters stubbed, `begin()` succeeds (every stub returns `true`),
-and the firmware free-runs: `Idle -> AcquiringBatch -> ExtractingFeatures ->
-Classifying -> ReportingResult (Unknown) -> Idle`, forever, logged over
-Serial at 115200 baud. This was verified by flashing an ESP32-S3
-DevKitC-1. `DryingActive` is never reached in this state because the
-classifier never reports `DryMore` — this is the safe, expected behavior
-until a real classifier is wired in.
+With the start switch off, the firmware sits in `Idle` — one
+`[paddy] state -> Idle | startSwitch=OFF` line over Serial (115200), then
+silence. The device simultaneously hosts the `PaddyMonitor` WiFi AP: a
+phone/laptop joining it can watch state / last result / temperature at
+http://192.168.4.1 (auto-refresh every 2s), and each page load increments
+the `[paddy][wifi-ui] served request #N` Serial line. Flip the switch on
+and the cycle runs continuously: `Idle -> AcquiringBatch ->
+ExtractingFeatures -> Classifying -> ReportingResult (Unknown) -> Idle`,
+mirrored on the WiFi status page. `DryingActive` is never reached because
+the classifier never reports `DryMore` — the safe, expected behavior until
+a real classifier is wired in. Builds clean for an ESP32-S3 DevKitC-1;
+the WiFi page itself has not yet been flash-verified (next step on
+resume), whereas the parked-OLED observations above date from physical
+bring-up sessions.
 
 ## Extending this scaffold
 

@@ -13,11 +13,15 @@ Five spatial moisture sensing points (4 around the sack + 1 central probe)
 plus a temperature sensor feed the ESP32-S3, which computes batch features
 (mean moisture, moisture variability, temperature), classifies the batch as
 **Store Safely / Dry More / High Risk** via an embedded ML classifier
-running fully offline, reports the result on an OLED + LEDs, and — if
-needed — drives a relay-controlled heater/blower until a safe condition is
-reached.
+running fully offline, reports the result on a user-facing status surface,
+and — if needed — drives a relay-controlled heater/blower until a safe
+condition is reached.
 
-Not a git repository.
+This is a git repository (Conventional Commits history). **The project is
+currently paused** — see "Project status: paused" at the top of
+[Electives Project/docs/ARCHITECTURE.md](Electives%20Project/docs/ARCHITECTURE.md)
+for what works, what is parked (the 1.3" OLED), and the concrete next step
+when resuming.
 
 ## Architecture
 
@@ -33,9 +37,14 @@ adapters live in `hal/` and are the only code allowed to touch
 All pin mapping, timing, and threshold constants live in
 `include/config/` — never as magic numbers elsewhere.
 
-This is currently a **scaffold**, not a finished product: every HAL
-adapter body (except `ArduinoClock`) is a `TODO(hardware)` stub, every pin
-in `PinConfig.h` is an unassigned placeholder, the classifier
+This is currently a **scaffold**, not a finished product: most HAL
+adapter bodies are still `TODO(hardware)` stubs (exceptions: `ArduinoClock`,
+`Ds18b20TemperatureSensor`, `GpioStartTrigger`, `WifiUiDisplay`;
+`Oled128x64Display` is a real driver too but is **parked** — flaky
+physical I2C, kept and still compiling but not instantiated; `WifiUiDisplay`
+is the active status surface), most
+pins in `PinConfig.h` are still unassigned placeholders (exceptions: OLED
+I2C GPIO8/9 @ 0x3C, start-switch GPIO5), the classifier
 (`NotImplementedClassifier`) always returns `Unknown` rather than faking a
 prediction, and there is no production drying algorithm yet. See
 "What is intentionally not implemented" in ARCHITECTURE.md for the full
