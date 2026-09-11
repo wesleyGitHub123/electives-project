@@ -114,8 +114,9 @@ Fill in with real bench numbers; one table per model under evaluation.
 
 | Model | Unit # | Condition | Raw ADC avg | Noise (max−min) | Voltage (V) | Notes |
 |---|---|---|---|---|---|---|
-| *(TBD)* | 1 | dry air | | | | |
-| *(TBD)* | 1 | water immersion | | | | |
+| ENGLAB capacitive (candidate) | 1 | dry air | 2648.3 | 96 | 2.134 | n=41, 20s window, GPIO6 |
+| ENGLAB capacitive (candidate) | 1 | water immersion (just submerged) | 872.8 | 499 | 0.703 | n=41, 20s window -- transient, see next row |
+| ENGLAB capacitive (candidate) | 1 | water immersion (settled +20s) | 707.2 | 59 | 0.570 | n=41, 20s window -- steady-state reading; noise fell 499->59 once settled. Response direction: wetter reads LOWER raw/voltage. Implies readAll() will need a settle/dwell delay after any state change, not just an instant sample. |
 | *(TBD)* | 1 | damp towel (intermediate) | | | | |
 | *(TBD)* | 1 | dry paddy | | | | |
 | *(TBD)* | 1 | wetted paddy | | | | |

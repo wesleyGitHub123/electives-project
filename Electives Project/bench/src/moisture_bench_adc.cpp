@@ -3,7 +3,7 @@
 // Set to whatever ADC-capable GPIO the candidate sensor's AOUT is jumpered
 // to right now. Deliberately NOT sourced from include/config/PinConfig.h --
 // this tool predates any wiring decision. See docs/BENCH_VALIDATION.md.
-constexpr int kBenchAdcPin = 1; // TBD: match current breadboard wiring
+constexpr int kBenchAdcPin = 6; // matches current breadboard wiring (AOUT -> GPIO6)
 
 constexpr float kAdcMaxCount = 4095.0f; // 12-bit
 constexpr float kAdcRefVoltage = 3.3f;
