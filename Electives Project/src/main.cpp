@@ -1,5 +1,6 @@
 #include <Arduino.h>
 
+#include "config/NetworkConfig.h"
 #include "config/PinConfig.h"
 #include "config/SystemConfig.h"
 #include "core/BatchController.h"
@@ -7,7 +8,8 @@
 #include "hal/ArduinoClock.h"
 #include "hal/Esp32MoistureSensorArray.h"
 #include "hal/Ds18b20TemperatureSensor.h"
-#include "hal/Ssd1306StatusDisplay.h"
+#include "hal/WifiUiDisplay.h"
+#include "hal/GpioStartTrigger.h"
 #include "hal/GpioStatusIndicator.h"
 #include "hal/RelayDryingActuator.h"
 
@@ -15,6 +17,15 @@
 // BatchController and pump update() from loop(). No business logic lives
 // here -- see include/core/BatchController.h for the state machine and
 // docs/ARCHITECTURE.md for the overall design.
+//
+// Display: WifiUiDisplay (WiFi-hosted status page) is the go-forward status
+// surface for now. The Oled128x64Display driver is parked, not deleted --
+// confirmed flaky physical I2C connection (endTransmission() flip-flopping
+// between 0/2 across resets on the same wiring, multiple boards), pending a
+// replacement module. Re-test it later by swapping this one line:
+//   WifiUiDisplay display(networkConfig);
+// -> Oled128x64Display display(pinConfig.display);
+// Nothing else changes; BatchController talks only to IDisplay.
 
 using namespace paddy;
 
@@ -24,17 +35,23 @@ namespace {
 // value is currently a TBD placeholder until wiring is finalized.
 PinConfig pinConfig{};
 
+// WiFi status-page config -- development-only local AP created by the
+// device itself (see include/config/NetworkConfig.h).
+NetworkConfig networkConfig{};
+
 ArduinoClock clock;
 Esp32MoistureSensorArray moistureSensors(pinConfig.moisture);
 Ds18b20TemperatureSensor temperatureSensor(pinConfig.temperature);
-Ssd1306StatusDisplay display(pinConfig.display);
+WifiUiDisplay display(networkConfig);
+GpioStartTrigger startTrigger(pinConfig.startTrigger);
 GpioStatusIndicator statusIndicator(pinConfig.statusIndicator);
 RelayDryingActuator dryingActuator(pinConfig.dryingActuator);
 NotImplementedClassifier classifier; // TBD: real embedded classifier plugs in here
 
 BatchController controller(moistureSensors, temperatureSensor, display,
-                            statusIndicator, dryingActuator, classifier,
-                            clock, config::DefaultControllerConfig());
+                           statusIndicator, dryingActuator, classifier,
+                           clock, startTrigger,
+                           config::DefaultControllerConfig());
 
 SystemState lastLoggedState = SystemState::Fault; // forces a log on first loop()
 
@@ -71,13 +88,16 @@ void setup() {
 
   controller.begin();
 
-  Serial.println("[paddy] scaffold boot -- HAL adapters are stubs (TBD real hardware wiring)");
+  Serial.println("[paddy] scaffold boot -- moisture/LED/relay adapters are stubs (TBD real hardware wiring)");
   Serial.print("[paddy] initial state: ");
   Serial.println(stateName(controller.state()));
 }
 
 void loop() {
   controller.update();
+  // Note: the WiFi display adapter is serviced inside controller.update()
+  // via IDisplay::poll() -- loop() does not (and must not) touch the
+  // adapter directly.
 
   // Debug-only: trace state transitions over Serial so the architecture can
   // be exercised end-to-end on real hardware before any sensor/actuator
@@ -88,6 +108,12 @@ void loop() {
     lastLoggedState = state;
     Serial.print("[paddy] state -> ");
     Serial.print(stateName(state));
+    if (state == SystemState::Idle) {
+      // Duplicate the WiFi page's switch-hint heuristic here so the Serial
+      // trace alone can sanity-check the session gate without a browser.
+      Serial.print(" | startSwitch=");
+      Serial.print(startTrigger.isSessionRequested() ? "ON" : "OFF");
+    }
     if (state == SystemState::ReportingResult || state == SystemState::DryingComplete) {
       Serial.print(" | result: ");
       Serial.print(statusName(controller.lastResult()));
