@@ -170,6 +170,31 @@ void test_switch_off_mid_session_does_not_abort_in_progress_batch() {
   TEST_ASSERT_EQUAL(static_cast<int>(SystemState::Idle), static_cast<int>(f.controller.state()));
 }
 
+void test_update_services_display_poll_every_cycle() {
+  Fixture f;
+  f.controller.begin();
+
+  // poll() must fire on EVERY update() call -- including while Idle and
+  // through transitions -- not just on state transitions like
+  // showState/showResult. This is what lets a WiFi adapter run
+  // server.handleClient() from loop() without main.cpp touching it.
+  for (int i = 0; i < 5; ++i) {
+    f.controller.update();
+  }
+  TEST_ASSERT_EQUAL(5, f.display.pollCallCount);
+
+  // Still serviced after begin() fails and the controller sits in Fault --
+  // the status surface must stay alive exactly when the user needs it most.
+  Fixture fFault;
+  fFault.display.beginResult = false;
+  fFault.controller.begin();
+  fFault.controller.update();
+  fFault.controller.update();
+  TEST_ASSERT_EQUAL(static_cast<int>(SystemState::Fault),
+                    static_cast<int>(fFault.controller.state()));
+  TEST_ASSERT_EQUAL(2, fFault.display.pollCallCount);
+}
+
 int main(int argc, char** argv) {
   UNITY_BEGIN();
   RUN_TEST(test_begin_enters_idle_when_all_adapters_succeed);
@@ -180,5 +205,6 @@ int main(int argc, char** argv) {
   RUN_TEST(test_idle_stays_in_idle_while_session_not_requested);
   RUN_TEST(test_idle_transitions_to_acquiring_once_session_requested);
   RUN_TEST(test_switch_off_mid_session_does_not_abort_in_progress_batch);
+  RUN_TEST(test_update_services_display_poll_every_cycle);
   return UNITY_END();
 }

@@ -10,9 +10,12 @@ class MockDisplay : public paddy::IDisplay {
   paddy::BatchStatus lastStatus = paddy::BatchStatus::Unknown;
   int showResultCallCount = 0;
   int showFaultCallCount = 0;
+  int pollCallCount = 0;
 
   bool begin() override { return beginResult; }
   void showState(paddy::SystemState state) override { lastState = state; }
+
+  void poll() override { ++pollCallCount; }
 
   void showResult(paddy::BatchStatus status, const paddy::BatchFeatures&) override {
     lastStatus = status;

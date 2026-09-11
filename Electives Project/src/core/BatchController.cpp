@@ -34,6 +34,10 @@ void BatchController::begin() {
 }
 
 void BatchController::update() {
+  // Serviced every cycle, regardless of state -- e.g. a WiFi display adapter
+  // needs server.handleClient() even while sitting in Idle or Fault.
+  display_.poll();
+
   switch (state_) {
     case SystemState::Idle:               handleIdle(); break;
     case SystemState::AcquiringBatch:     handleAcquiringBatch(); break;
