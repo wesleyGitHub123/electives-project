@@ -22,6 +22,10 @@ void test_extract_returns_invalid_when_no_valid_moisture_readings() {
 
   TEST_ASSERT_FALSE(features.valid);
   TEST_ASSERT_EQUAL_FLOAT(0.0f, features.meanMoisture);
+  // Temperature still surfaces even though the overall features are
+  // invalid (moisture-only reason) -- lets real sensor wiring be
+  // sanity-checked over Serial/UI while moisture sensors are still stubs.
+  TEST_ASSERT_EQUAL_FLOAT(25.0f, features.temperatureCelsius);
 }
 
 void test_extract_computes_mean_of_valid_readings_only() {
@@ -58,6 +62,8 @@ void test_extract_invalid_when_temperature_missing() {
   BatchFeatures features = FeatureExtractor::extract(sample);
 
   TEST_ASSERT_FALSE(features.valid);
+  // No valid temperature reading at all -- nothing to surface.
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, features.temperatureCelsius);
 }
 
 int main(int argc, char** argv) {

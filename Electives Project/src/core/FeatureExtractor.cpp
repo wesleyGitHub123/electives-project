@@ -31,13 +31,20 @@ BatchFeatures FeatureExtractor::extract(const BatchSample& sample) {
     }
   }
 
+  // Surface temperature independent of moisture validity, so real sensor
+  // wiring can be sanity-checked (Serial/WiFi UI) even while the moisture
+  // sensors are still stubs -- matches the original single-probe behavior,
+  // which always passed temperature through regardless of moisture state.
+  // Only zeroed when temperature itself has no valid reading.
+  features.temperatureCelsius =
+      (tempValidCount > 0) ? (tempSum / static_cast<float>(tempValidCount)) : 0.0f;
+
   // Conservative validity rule: every temperature probe must report a valid
   // reading for the features to be trusted. With a single probe this is
   // exactly the old temperatureValid gate.
   if (validCount == 0 || tempValidCount == 0 || !allTempsValid) {
     features.meanMoisture = 0.0f;
     features.moistureVariability = 0.0f;
-    features.temperatureCelsius = 0.0f;
     features.valid = false;
     return features;
   }
@@ -59,7 +66,6 @@ BatchFeatures FeatureExtractor::extract(const BatchSample& sample) {
 
   features.meanMoisture = mean;
   features.moistureVariability = std::sqrt(variance);
-  features.temperatureCelsius = tempSum / static_cast<float>(tempValidCount);
   features.valid = true;
 
   return features;
