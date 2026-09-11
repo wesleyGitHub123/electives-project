@@ -10,6 +10,7 @@ BatchController::BatchController(IMoistureSensorArray& moistureSensors,
                                   IDryingActuator& dryingActuator,
                                   IClassifier& classifier,
                                   IClock& clock,
+                                  IStartTrigger& startTrigger,
                                   Config config)
     : moistureSensors_(moistureSensors),
       temperatureSensor_(temperatureSensor),
@@ -18,6 +19,7 @@ BatchController::BatchController(IMoistureSensorArray& moistureSensors,
       dryingActuator_(dryingActuator),
       classifier_(classifier),
       clock_(clock),
+      startTrigger_(startTrigger),
       config_(config) {}
 
 void BatchController::begin() {
@@ -25,7 +27,8 @@ void BatchController::begin() {
                    temperatureSensor_.begin() &&
                    display_.begin() &&
                    statusIndicator_.begin() &&
-                   dryingActuator_.begin();
+                   dryingActuator_.begin() &&
+                   startTrigger_.begin();
 
   enterState(ok ? SystemState::Idle : SystemState::Fault);
 }
@@ -55,9 +58,13 @@ bool BatchController::elapsedSinceStateEntry(uint32_t durationMs) const {
 }
 
 void BatchController::handleIdle() {
-  // TBD: currently starts a new batch immediately every cycle. A future
-  // revision may gate this on an external trigger (button, schedule, etc.).
-  enterState(SystemState::AcquiringBatch);
+  // Level-triggered, checked only here: a session already in progress
+  // always runs to completion even if the switch flips off mid-cycle.
+  // This gates when a session *starts*, not whether hardware may keep
+  // running -- an abort/e-stop behavior would need its own safety design.
+  if (startTrigger_.isSessionRequested()) {
+    enterState(SystemState::AcquiringBatch);
+  }
 }
 
 void BatchController::handleAcquiringBatch() {

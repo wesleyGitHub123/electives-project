@@ -10,6 +10,7 @@
 #include "interfaces/IDryingActuator.h"
 #include "interfaces/IClassifier.h"
 #include "interfaces/IClock.h"
+#include "interfaces/IStartTrigger.h"
 
 namespace paddy {
 
@@ -46,6 +47,7 @@ class BatchController {
                    IDryingActuator& dryingActuator,
                    IClassifier& classifier,
                    IClock& clock,
+                   IStartTrigger& startTrigger,
                    Config config);
 
   // Initializes all hardware adapters. Enters Fault if any adapter fails.
@@ -82,6 +84,7 @@ class BatchController {
   IDryingActuator& dryingActuator_;
   IClassifier& classifier_;
   IClock& clock_;
+  IStartTrigger& startTrigger_;
   Config config_;
 
   SystemState state_ = SystemState::Idle;
