@@ -76,12 +76,14 @@ bool Oled128x64Display::begin() {
   return true;
 }
 
+// Same compact font as renderThreeLines() -- u8g2_font_10x20_tr (previous
+// choice) rendered oversized on the actual panel; 7x13 reads cleanly and
+// keeps both render paths visually consistent.
 void Oled128x64Display::renderTwoLines(const char* line1, const char* line2) {
   u8g2_.clearBuffer();
-  u8g2_.setFont(u8g2_font_10x20_tr);
-  u8g2_.drawStr(0, 20, line1);
-  u8g2_.setFont(u8g2_font_10x20_tr);
-  u8g2_.drawStr(0, 50, line2);
+  u8g2_.setFont(u8g2_font_7x13_tr);
+  u8g2_.drawStr(0, 24, line1);
+  u8g2_.drawStr(0, 48, line2);
   u8g2_.sendBuffer();
 }
 

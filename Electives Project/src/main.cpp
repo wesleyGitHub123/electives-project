@@ -8,7 +8,7 @@
 #include "hal/ArduinoClock.h"
 #include "hal/Esp32MoistureSensorArray.h"
 #include "hal/Ds18b20TemperatureSensor.h"
-#include "hal/WifiUiDisplay.h"
+#include "hal/Oled128x64Display.h"
 #include "hal/GpioStartTrigger.h"
 #include "hal/GpioStatusIndicator.h"
 #include "hal/RelayDryingActuator.h"
@@ -18,13 +18,13 @@
 // here -- see include/core/BatchController.h for the state machine and
 // docs/ARCHITECTURE.md for the overall design.
 //
-// Display: WifiUiDisplay (WiFi-hosted status page) is the go-forward status
-// surface for now. The Oled128x64Display driver is parked, not deleted --
-// confirmed flaky physical I2C connection (endTransmission() flip-flopping
-// between 0/2 across resets on the same wiring, multiple boards), pending a
-// replacement module. Re-test it later by swapping this one line:
-//   WifiUiDisplay display(networkConfig);
-// -> Oled128x64Display display(pinConfig.display);
+// Display: Oled128x64Display is back in as the primary status surface --
+// the replacement 1.3" SH1106 module is wired (GPIO8=SDA, GPIO9=SCL) and
+// this is the first real test of it. WifiUiDisplay (hal/WifiUiDisplay.h)
+// stays in the tree as a proven fallback if the OLED bring-up doesn't pan
+// out; swap back with:
+//   Oled128x64Display display(pinConfig.display);
+// -> WifiUiDisplay display(networkConfig);
 // Nothing else changes; BatchController talks only to IDisplay.
 
 using namespace paddy;
@@ -36,14 +36,16 @@ namespace {
 PinConfig pinConfig{};
 
 // WiFi status-page config -- development-only local AP created by the
-// device itself (see include/config/NetworkConfig.h).
+// device itself (see include/config/NetworkConfig.h). Currently unused
+// while Oled128x64Display is the active display; kept declared so the
+// WifiUiDisplay fallback swap (see comment above) stays a true one-liner.
 NetworkConfig networkConfig{};
 
 ArduinoClock clock;
 Esp32MoistureSensorArray moistureSensors(pinConfig.moisture,
                                          pinConfig.moistureCalibration);
 Ds18b20TemperatureSensor temperatureSensor(pinConfig.temperature);
-WifiUiDisplay display(networkConfig);
+Oled128x64Display display(pinConfig.display);
 GpioStartTrigger startTrigger(pinConfig.startTrigger);
 GpioStatusIndicator statusIndicator(pinConfig.statusIndicator);
 RelayDryingActuator dryingActuator(pinConfig.dryingActuator);

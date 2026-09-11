@@ -6,18 +6,15 @@
 namespace paddy {
 
 // Real 1.3" 128x64 I2C OLED via U8g2 (olikraus/U8g2). Driver chip: SH1106,
-// CONFIRMED by the replacement module's listing -- no longer a guess
-// against the original, abandoned module (whose never-rendered failure is
-// believed to be hardware/connectivity, not a chip mismatch). The
-// constructor below has been updated ahead of physical re-testing since
-// this is now a known fact, not something to wait on wiring for. If the
-// panel still renders blank/garbled once wired, swap the U8G2_...
-// constructor below -- a one-line change, nothing else depends on it.
+// CONFIRMED working on real hardware -- the replacement module renders
+// correctly once wiring was fixed (see ARCHITECTURE.md bring-up notes).
 //
-// Content scope: state name + switch hint, fault message
-// (renderTwoLines, large font); result status + temperature + moisture
-// mean (renderThreeLines, compact font). Raw/unitless moisture, same
-// convention as the WiFi page (see WifiUiDisplay).
+// Content scope: state name + switch hint, fault message (renderTwoLines);
+// result status + temperature + moisture mean (renderThreeLines). Both
+// helpers use the same compact font (u8g2_font_7x13_tr) -- the original
+// larger font (u8g2_font_10x20_tr) rendered oversized on the actual panel.
+// Moisture is raw/unitless, same convention as the WiFi page (see
+// WifiUiDisplay).
 class Oled128x64Display : public IDisplay {
  public:
   explicit Oled128x64Display(const DisplayPinConfig& pins);
