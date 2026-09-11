@@ -39,8 +39,14 @@ struct BatchSample {
 struct BatchFeatures {
   float meanMoisture = 0.0f;
   float moistureVariability = 0.0f; // "how unevenly dried" the batch is
+  // Independent of `valid` below -- true whenever the moisture statistics
+  // themselves reflect real readings (mean/variability are trustworthy),
+  // regardless of temperature sensor state. Never inferred from `valid`,
+  // which also requires temperature -- the same overloaded-flag bug class
+  // previously fixed for temperature (silently zeroed/hidden values).
+  bool moistureValid = false;
   float temperatureCelsius = 0.0f;
-  // Independent of `valid` below -- true whenever temperatureCelsius itself
+  // Independent of the flags above -- true whenever temperatureCelsius itself
   // reflects a real reading, regardless of moisture sensor state. Lets
   // consumers (Serial trace, WiFi UI) display temperature on its own merits
   // instead of hiding it behind the whole-batch gate.

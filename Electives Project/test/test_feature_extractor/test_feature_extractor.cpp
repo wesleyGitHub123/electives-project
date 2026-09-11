@@ -22,6 +22,8 @@ void test_extract_returns_invalid_when_no_valid_moisture_readings() {
 
   TEST_ASSERT_FALSE(features.valid);
   TEST_ASSERT_EQUAL_FLOAT(0.0f, features.meanMoisture);
+  // No valid moisture readings at all -- moisture statistics are not real.
+  TEST_ASSERT_FALSE(features.moistureValid);
   // Temperature still surfaces even though the overall features are
   // invalid (moisture-only reason) -- lets real sensor wiring be
   // sanity-checked over Serial/UI while moisture sensors are still stubs.
@@ -42,6 +44,7 @@ void test_extract_computes_mean_of_valid_readings_only() {
 
   TEST_ASSERT_TRUE(features.valid);
   TEST_ASSERT_EQUAL_FLOAT(25.0f, features.meanMoisture); // (10+20+30+40)/4
+  TEST_ASSERT_TRUE(features.moistureValid);
   TEST_ASSERT_EQUAL_FLOAT(28.0f, features.temperatureCelsius);
   TEST_ASSERT_TRUE(features.temperatureValid);
 }
@@ -54,6 +57,7 @@ void test_extract_computes_zero_variability_for_uniform_readings() {
   BatchFeatures features = FeatureExtractor::extract(sample);
 
   TEST_ASSERT_EQUAL_FLOAT(0.0f, features.moistureVariability);
+  TEST_ASSERT_TRUE(features.moistureValid);
 }
 
 void test_extract_invalid_when_temperature_missing() {
@@ -67,6 +71,10 @@ void test_extract_invalid_when_temperature_missing() {
   // No valid temperature reading at all -- nothing to surface.
   TEST_ASSERT_EQUAL_FLOAT(0.0f, features.temperatureCelsius);
   TEST_ASSERT_FALSE(features.temperatureValid);
+  // Independence pin: valid moisture readings must keep moistureValid TRUE
+  // even when temperature is entirely missing -- never inferred from the
+  // overall gate. (Mirrors the temperature independence pinned above.)
+  TEST_ASSERT_TRUE(features.moistureValid);
 }
 
 int main(int argc, char** argv) {

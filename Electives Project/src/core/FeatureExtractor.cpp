@@ -31,6 +31,13 @@ BatchFeatures FeatureExtractor::extract(const BatchSample& sample) {
     }
   }
 
+  // Surface moisture validity independent of temperature validity, so each
+  // quantity is reported on its own merits. Mirrors temperatureValid: never
+  // infer one from the other or from the overall `valid` gate -- a real
+  // temperature bug (silently zeroed then silently hidden) came from
+  // exactly that overloaded-flag pattern.
+  features.moistureValid = (validCount > 0);
+
   // Surface temperature independent of moisture validity, so real sensor
   // wiring can be sanity-checked (Serial/WiFi UI) even while the moisture
   // sensors are still stubs -- matches the original single-probe behavior,
